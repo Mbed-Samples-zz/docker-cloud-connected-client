@@ -8,7 +8,7 @@ echo "---> Change to /root"
 cd /root
 
 echo "---> Call v3/users to get account id data structure"
-curl -s -X GET https://api.us-east-1.mbedcloud.com/v3/users -H 'Authorization: Bearer '"${API_KEY}"'' -H 'Content-Type: application/json' > users.json
+curl -s -X GET https://api.us-east-1.mbedcloud.com/v3/users -H 'Authorization: Bearer '"${MBED_CLOUD_API_KEY}"'' -H 'Content-Type: application/json' > users.json
 
 echo "---> Set account id from v3/users results"
 ACCOUNT_ID=$(jq -r '.data[0]."account_id"')
@@ -32,7 +32,7 @@ mkdir keystore && cd keystore
 
 curl -s -X GET \
   https://api.us-east-1.mbedcloud.com/v3/server-credentials/lwm2m \
-  -H 'Authorization: Bearer '"${API_KEY}"'' \
+  -H 'Authorization: Bearer '"${MBED_CLOUD_API_KEY}"'' \
   -H 'Cache-Control: no-cache' \
   -H 'Content-Type: application/json' | python -c 'import sys, json; print json.load(sys.stdin)["server_certificate"]' > lwm2m_server_ca_certificate.pem
 
@@ -87,7 +87,7 @@ echo -n "{\"name\": \"Dexter Fryar my_ca_public_cert.pem\", \"description\": \"L
 curl -X POST \
   -d @payload.json \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer '"${API_KEY}"'' \
+  -H 'Authorization: Bearer '"${MBED_CLOUD_API_KEY}"'' \
   -H 'Cache-Control: no-cache' \
   https://api.us-east-1.mbedcloud.com/v3/trusted-certificates
 
