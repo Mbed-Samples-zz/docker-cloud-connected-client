@@ -1,0 +1,11 @@
+version: "3.3"
+services:
+  mbed_os_dev:
+    command: ['/root/Config/build.sh']
+    env_file:
+      - ../.env
+    volumes:
+      - "$PWD/:/root/Config"
+      - "../creds:/root/Creds"
+      - "../share:/root/Share"
+    container_name: mbed-os.k64f.cellular.wnc14a2a

@@ -1,0 +1,41 @@
+FROM ubuntu:16.04
+
+LABEL maintainer="dexter.fryar@arm.com"
+
+WORKDIR /root
+
+# Install common utilities
+RUN apt update && apt install -y --force-yes \
+      python \
+      python-pip \
+      vim \
+      most \
+      tree \
+      git \
+      curl \
+      wget \
+      unzip \
+      jq \
+      srecord \
+      moreutils
+
+# Need this to get add-apt-repository
+RUN apt install -y --force-yes software-properties-common
+
+# Add latest gcc repo to apt
+RUN add-apt-repository -y ppa:team-gcc-arm-embedded/ppa && apt update
+
+# Install mbed specific dependencies
+RUN apt install -y --force-yes \
+      mercurial \
+      libssl-dev \
+      gcc-arm-embedded
+
+# Install mbed tools via pip package manager
+RUN pip install \
+      mbed-cli \
+      click
+
+RUN mkdir -p /root/Source
+
+WORKDIR /

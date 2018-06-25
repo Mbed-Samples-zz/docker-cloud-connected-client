@@ -1,0 +1,32 @@
+FROM ubuntu:12.04
+
+LABEL maintainer="dexter.fryar@arm.com"
+
+WORKDIR /root
+
+# Install common utilities
+RUN apt-get update && apt-get install -y --force-yes \
+      vim \
+      git \
+      curl \
+      maven \
+      python-software-properties \
+      uuid
+
+# Install PPA that has
+RUN apt-add-repository ppa:webupd8team/java -y
+
+RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+RUN echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+
+RUN apt-get update && apt-get install oracle-java8-installer -y
+RUN apt-get install oracle-java8-set-default -y
+
+# Need this to get add-apt-repository
+RUN apt-get install -y --force-yes software-properties-common
+
+RUN cd /root
+
+RUN mkdir -p /root/Source
+
+WORKDIR /

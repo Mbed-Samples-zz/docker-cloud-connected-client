@@ -1,0 +1,11 @@
+version: "3.3"
+services:
+  mbed_os_dev.12.04:
+    command: ['/root/Config/build.sh']
+    env_file:
+      - ../../.env
+    volumes:
+      - "./:/root/Config"
+      - "./creds:/root/Creds"
+      - "./share:/root/Share"
+    container_name: mbed-cloud-java-coap-client-example

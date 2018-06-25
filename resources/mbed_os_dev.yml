@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  mbed_os_dev:
+      command: ['/bin/bash']
+      image: mbed_os_dev
+      build:
+        context: .
+        labels:
+          com.mbed.os.description: "Build enviroment for Mbed OS"
+        dockerfile: Dockerfile.mbed_os_dev
