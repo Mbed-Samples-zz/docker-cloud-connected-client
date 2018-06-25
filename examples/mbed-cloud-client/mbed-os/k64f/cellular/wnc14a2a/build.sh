@@ -96,6 +96,9 @@ jq '."target_overrides"."*"."storage-selector.storage" = "SD_CARD"' mbed_app.jso
 echo "---> Set client_app.primary_partition_size"
 jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" = 1048576' mbed_app.json | sponge mbed_app.json
 
+echo "---> Disable auto partitioning"
+jq '.target_overrides."*"."auto_partition" = 0' mbed_lib.json | sponge mbed_lib.json
+
 echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
 

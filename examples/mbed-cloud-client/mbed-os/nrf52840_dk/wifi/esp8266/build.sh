@@ -167,6 +167,9 @@ jq '."target_overrides"."*"."storage-selector.storage" = "SPI_FLASH"' mbed_app.j
 echo "---> Set client_app.primary_partition_size"
 jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" = 1048576' mbed_app.json | sponge mbed_app.json
 
+echo "---> Disable auto partitioning"
+jq '.target_overrides."*"."auto_partition" = 0' mbed_lib.json | sponge mbed_lib.json
+
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
 echo "---> Set nordic.uart_0_fifo_size = 1024"
@@ -195,25 +198,6 @@ jq 'del(."MCU_NRF52840"."features")' mbed-os/targets/targets.json | sponge mbed-
 
 echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
 jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
-
-# https://github.com/ARMmbed/mbed-os/pull/7299
-# echo "---> Apply mbed-os/PR/7299 to work around bad part table"
-# wget -O mbed-os/features/filesystem/bd/MBRBlockDevice.cpp https://raw.githubusercontent.com/ARMmbed/mbed-os/28a78308afad87ac2aa772bdc47949ebc9f684e4/features/filesystem/bd/MBRBlockDevice.cpp
-
-# https://github.com/ARMmbed/mbed-os/pull/7280
-# echo "---> Apply mbed-os/PR/7280 to work around SPI assertion"
-# wget -O mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/spi_api.c https://raw.githubusercontent.com/marcuschangarm/mbed-os/6cec180d0b3349eaaaa3fd50ec04a86072490039/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/spi_api.c
-# merged with latest mbed-os 8e170ccbd1e22e5545e960061b9dc34976fd0176
-
-#https://github.com/ARMmbed/mbed-os/pull/7099
-# echo "---> Apply mbed-os/PR/7099 to work around CRYPTOCELL init"
-# wget -O mbed-os/features/cryptocell/FEATURE_CRYPTOCELL310/Readme.md https://github.com/RonEld/mbed-os/blob/c3b31bc500024de2c34852ae6116030f05b8b05f/features/cryptocell/FEATURE_CRYPTOCELL310/Readme.md
-# wget -O mbed-os/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/cc_platform_nrf52840.c https://github.com/ARMmbed/mbed-os/blob/24cebbaec3bd9fdf6f3c77c315c54482d3fa867d/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/cc_platform_nrf52840.c
-# wget -O mbed-os/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/crypto_platform.c https://raw.githubusercontent.com/RonEld/mbed-os/c3b31bc500024de2c34852ae6116030f05b8b05f/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/crypto_platform.c
-# wget -O mbed-os/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/crypto_platform.h https://raw.githubusercontent.com/RonEld/mbed-os/c3b31bc500024de2c34852ae6116030f05b8b05f/features/cryptocell/FEATURE_CRYPTOCELL310/TARGET_MCU_NRF52840/crypto_platform.h
-# wget -O mbed-os/features/mbedtls/platform/inc/platform_alt.h https://raw.githubusercontent.com/RonEld/mbed-os/c3b31bc500024de2c34852ae6116030f05b8b05f/features/mbedtls/platform/inc/platform_alt.h
-# wget -O mbed-os/features/mbedtls/platform/inc/platform_mbed.h https://raw.githubusercontent.com/RonEld/mbed-os/c3b31bc500024de2c34852ae6116030f05b8b05f/features/mbedtls/platform/inc/platform_mbed.h
-# wget -O mbed-os/features/mbedtls/platform/src/platform_alt.c https://raw.githubusercontent.com/RonEld/mbed-os/c3b31bc500024de2c34852ae6116030f05b8b05f/features/mbedtls/platform/src/platform_alt.c
 
 echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
 cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
