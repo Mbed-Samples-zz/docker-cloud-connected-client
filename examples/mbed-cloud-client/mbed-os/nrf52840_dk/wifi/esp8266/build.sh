@@ -5,6 +5,7 @@ date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
 EASY_CONNECT_VERSION=master
+ESP8266_VERSION=master
 
 MBED_CLOUD_VERSION=1.3.3
 MBED_CLOUD_UPDATE_EPOCH=0
@@ -12,11 +13,7 @@ MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
 BUILD_PROFILE=release
 
-# Currently need features not implemented until mbed-os 5.9
-# so we're pinned to the latest commit on 2018/06/22 8e170ccbd1e22e5545e960061b9dc34976fd0176
-# Updated to 8756183478e93edb0c3d5883e559ac839e95654a since mbed-os/PR/7299
-# was merged this morning
-MBED_OS_VERSION=8756183478e93edb0c3d5883e559ac839e95654a
+MBED_OS_VERSION=master
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
@@ -65,6 +62,7 @@ echo "mbed-os/features/nvstore/*" >> .mbedignore
 echo "mbed-os/features/cellular/*" >> .mbedignore
 echo "mbed-os/features/lorawan/*" >> .mbedignore
 echo "mbed-os/features/device_key/*" >> .mbedignore
+echo "mbed-os/features/lwipstack/*" >> .mbedignore
 
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
@@ -125,7 +123,7 @@ echo "---> Copy wifi mbed_app.json config"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
-jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
 
 # echo "---> Change LED to ON"
 # sed -r -i -e 's/DigitalOut[ ]*led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/setup.cpp
@@ -138,8 +136,6 @@ jq '.config."wifi-password".value = "\"'"${WIFI_PASS}"'\""' mbed_app.json | spon
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
-
-########## run the combine script ####### OR
 
 # New undocumented feature that removes the need to run the combine script
 echo "---> Copy managed bootloader automatic application header mbed_lib.json to tools dir"
@@ -168,7 +164,7 @@ echo "---> Set client_app.primary_partition_size"
 jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" = 1048576' mbed_app.json | sponge mbed_app.json
 
 echo "---> Disable auto partitioning"
-jq '.target_overrides."*"."auto_partition" = 0' mbed_lib.json | sponge mbed_lib.json
+jq '.target_overrides."*"."auto_partition" = 1' mbed_lib.json | sponge mbed_lib.json
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
@@ -194,19 +190,38 @@ echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
 
 echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
-jq 'del(."MCU_NRF52840"."features")' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
-jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+# jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
 
-echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
-cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
+if [ "$EASY_CONNECT_VERSION" ]; then
+    echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
+    cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
+fi
+
+if [ "$ESP8266_VERSION" ]; then
+    echo "---> Run mbed update on ESP8266 driver ${ESP8266_VERSION}"
+    cd easy-connect/esp8266-driver && mbed update ${ESP8266_VERSION} && cd ../..
+fi
 
 echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-application-mbed_app.json"
 cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
 
 echo "---> Copy current application mbed_lib.json to /root/Share/${EPOCH_TIME}-application-mbed_lib.json"
 cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+
+# https://github.com/ARMmbed/mbed-os/pull/7369
+echo "---> Apply mbed-os/pull/7369 for serial race condition fix"
+wget -O mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c https://raw.githubusercontent.com/marcuschangarm/mbed-os/2d7186602894e653aa9a81b3d7751b32a15f0ff2/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
+
+# Note there is no PR for this issue as it is unresolved
+# jumping from the bootloader to the application means
+# that the interrupt state is unknown since the chip is
+# already running in some previous state
+echo "---> Set interrupts to disabled upon init"
+sed -i 's/        first_init = false;/        first_init = false;\n\n        nordic_nrf5_uart_register[0]->INTEN = 0;\n        nordic_nrf5_uart_register[1]->INTEN = 0;/' mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
 
 echo "---> Compile first mbed client"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
