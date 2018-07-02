@@ -212,8 +212,8 @@ cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
 echo "---> Copy current application mbed_lib.json to /root/Share/${EPOCH_TIME}-application-mbed_lib.json"
 cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
 
-# https://github.com/ARMmbed/mbed-os/pull/7369
-echo "---> Apply mbed-os/pull/7369 for serial race condition fix"
+# https://github.com/ARMmbed/mbed-os/pull/7401
+echo "---> Apply mbed-os/pull/7401 to fix interrupt initialization"
 wget -O mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c https://raw.githubusercontent.com/marcuschangarm/mbed-os/a0224ed7947fc9c20c051de571a746d6f55d96e6/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
 
 echo "---> Compile first mbed client"
