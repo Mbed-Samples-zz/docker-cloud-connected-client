@@ -214,14 +214,7 @@ cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
 
 # https://github.com/ARMmbed/mbed-os/pull/7369
 echo "---> Apply mbed-os/pull/7369 for serial race condition fix"
-wget -O mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c https://raw.githubusercontent.com/marcuschangarm/mbed-os/2d7186602894e653aa9a81b3d7751b32a15f0ff2/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
-
-# Note there is no PR for this issue as it is unresolved
-# jumping from the bootloader to the application means
-# that the interrupt state is unknown since the chip is
-# already running in some previous state
-echo "---> Set interrupts to disabled upon init"
-sed -i 's/        first_init = false;/        first_init = false;\n\n        nordic_nrf5_uart_register[0]->INTEN = 0;\n        nordic_nrf5_uart_register[1]->INTEN = 0;/' mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
+wget -O mbed-os/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c https://raw.githubusercontent.com/marcuschangarm/mbed-os/a0224ed7947fc9c20c051de571a746d6f55d96e6/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_NRF52/serial_api.c
 
 echo "---> Compile first mbed client"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
