@@ -25,6 +25,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
+UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
     echo "---> Define WIFI_SSID in your .env file"
@@ -125,8 +126,8 @@ cp configs/wifi_esp8266_v4.json mbed_app.json
 echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
 
-# echo "---> Change LED to ON"
-# sed -r -i -e 's/DigitalOut[ ]*led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/setup.cpp
+echo "---> Change LED to ON"
+sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
 
 echo "---> Set wifi SSID in config"
 jq '.config."wifi-ssid".value = "\"'"${WIFI_SSID}"'\""' mbed_app.json | sponge mbed_app.json
@@ -223,8 +224,8 @@ cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example.hex /root/
 
 # Check for an upgrade image name and build a second image
 if [ "$UPGRADE_IMAGE_NAME" ]; then
-    echo "---> Code change for upgrade image"
-    sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
+    echo "---> Change LED blink to LED2 in mbed_app.json"
+    jq '.config."led-pinname"."value" = "LED2"' mbed_app.json | sponge mbed_app.json
 
     echo "---> Output a bin file for upgrades"
     jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "bin"' mbed_app.json | sponge mbed_app.json
@@ -241,12 +242,12 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
     cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
 
-    echo "---> Copy upgrade image to share ${EPOCH_TIME}-upgrade.bin"
-    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin
+    echo "---> Copy upgrade image to share ${UPGRADE_IMAGE_NAME}.bin"
+    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${UPGRADE_IMAGE_NAME}.bin
 
     echo "---> Run upgrade campaign using manifest tool"
     echo "cd /root/Download/manifest_tool"
-    echo "manifest-tool update device -p /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
+    echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
 echo "---> Keeping the container running with a tail of the build logs"

@@ -12,11 +12,7 @@ MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
 BUILD_PROFILE=release
 
-# Currently need features not implemented until mbed-os 5.9
-# so we're pinned to the latest commit on 2018/06/22 8e170ccbd1e22e5545e960061b9dc34976fd0176
-# Updated to 8756183478e93edb0c3d5883e559ac839e95654a since mbed-os/PR/7299
-# was merged this morning
-MBED_OS_VERSION=8756183478e93edb0c3d5883e559ac839e95654a
+MBED_OS_VERSION=masater
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=K64F
@@ -28,6 +24,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.wnc14a2a
+UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 echo "---> Make Source Download dirs"
 mkdir -p /root/Source /root/Download/manifest_tool
@@ -81,7 +78,7 @@ echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
-sed -r -i -e 's/DigitalOut[ ]*led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/setup.cpp
+sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
 
 echo "---> Change LED to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -131,12 +128,12 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
     cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
 
-    echo "---> Copy upgrade image to share ${EPOCH_TIME}-upgrade.bin"
-    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin
+    echo "---> Copy upgrade image to share ${UPGRADE_IMAGE_NAME}.bin"
+    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${UPGRADE_IMAGE_NAME}.bin
 
     echo "---> Run upgrade campaign using manifest tool"
     echo "cd /root/Download/manifest_tool"
-    echo "manifest-tool update device -p /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
+    echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
 echo "---> Keeping the container running with a tail of the build logs"

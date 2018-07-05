@@ -12,11 +12,7 @@ MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
 BUILD_PROFILE=release
 
-# Currently need features not implemented until mbed-os 5.9
-# so we're pinned to the latest commit on 2018/06/22 8e170ccbd1e22e5545e960061b9dc34976fd0176
-# Updated to 8756183478e93edb0c3d5883e559ac839e95654a since mbed-os/PR/7299
-# was merged this morning
-MBED_OS_VERSION=8756183478e93edb0c3d5883e559ac839e95654a
+MBED_OS_VERSION=master
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
@@ -28,6 +24,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.wnc14a2a
+UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 echo "---> Make Source Download dirs"
 mkdir -p /root/Source /root/Download/manifest_tool
@@ -57,6 +54,7 @@ echo "mbed-os/features/nvstore/*" >> .mbedignore
 echo "mbed-os/features/cellular/*" >> .mbedignore
 echo "mbed-os/features/lorawan/*" >> .mbedignore
 echo "mbed-os/features/device_key/*" >> .mbedignore
+echo "mbed-os/features/lwipstack/*" >> .mbedignore
 
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
@@ -122,10 +120,10 @@ echo "---> Set up WNC config in mbed_app.json"
 jq '.config."network-interface"."value" = "CELLULAR_WNC14A2A"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
-jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
 
-# echo "---> Change LED to ON"
-# sed -r -i -e 's/DigitalOut[ ]*led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/setup.cpp
+echo "---> Change LED to ON"
+sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -159,7 +157,7 @@ echo "---> Set client_app.primary_partition_size"
 jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" = 1048576' mbed_app.json | sponge mbed_app.json
 
 echo "---> Disable auto partitioning"
-jq '.target_overrides."*"."auto_partition" = 0' mbed_lib.json | sponge mbed_lib.json
+jq '.target_overrides."*"."auto_partition" = 1' mbed_lib.json | sponge mbed_lib.json
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
@@ -190,13 +188,16 @@ echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
 
 echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
-jq 'del(."MCU_NRF52840"."features")' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
-jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+# jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
 
-echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
-cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
+if [ "$EASY_CONNECT_VERSION" ]; then
+    echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
+    cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
+fi
 
 echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-application-mbed_app.json"
 cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
@@ -215,8 +216,8 @@ cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example.hex /root/
 
 # Check for an upgrade image name and build a second image
 if [ "$UPGRADE_IMAGE_NAME" ]; then
-    echo "---> Code change for upgrade image"
-    sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
+    echo "---> Change LED blink to LED2 in mbed_app.json"
+    jq '.config."led-pinname"."value" = "LED2"' mbed_app.json | sponge mbed_app.json
 
     echo "---> Output a bin file for upgrades"
     jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "bin"' mbed_app.json | sponge mbed_app.json
@@ -233,12 +234,12 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
     cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
 
-    echo "---> Copy upgrade image to share ${EPOCH_TIME}-upgrade.bin"
-    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin
+    echo "---> Copy upgrade image to share ${UPGRADE_IMAGE_NAME}.bin"
+    cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${UPGRADE_IMAGE_NAME}.bin
 
     echo "---> Run upgrade campaign using manifest tool"
     echo "cd /root/Download/manifest_tool"
-    echo "manifest-tool update device -p /root/Share/${EPOCH_TIME}-${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
+    echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
 echo "---> Keeping the container running with a tail of the build logs"
