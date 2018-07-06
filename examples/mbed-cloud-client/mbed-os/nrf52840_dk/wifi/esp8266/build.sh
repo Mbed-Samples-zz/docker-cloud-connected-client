@@ -68,12 +68,12 @@ echo "mbed-os/features/lwipstack/*" >> .mbedignore
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-size" = "(1024*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "(MBED_CONF_APP_FLASH_START_ADDRESS+1016*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "(4*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "(MBED_CONF_APP_FLASH_START_ADDRESS+1020*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "(4*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "(MBED_CONF_APP_FLASH_START_ADDRESS+212*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."application-start-address" = "(MBED_CONF_APP_FLASH_START_ADDRESS+213*1024)"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x35000"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."application-start-address" = "0x35400"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."max-application-size" = "DEFAULT_MAX_APPLICATION_SIZE"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
 
@@ -124,7 +124,7 @@ echo "---> Copy wifi mbed_app.json config"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
-jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
 sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
@@ -185,7 +185,7 @@ echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["PAL_INTERNAL_FLASH_SECTION_1_ADDRESS=0xFE000","PAL_INTERNAL_FLASH_SECTION_2_ADDRESS=0xFF000","PAL_INTERNAL_FLASH_SECTION_1_SIZE=0x1000","PAL_INTERNAL_FLASH_SECTION_2_SIZE=0x1000","PAL_INT_FLASH_NUM_SECTIONS=2","PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0"]' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
@@ -194,8 +194,13 @@ echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
-# jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
 jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set ${TARGET_NAME} SOTP details in mbed_lib.json"
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
@@ -211,7 +216,10 @@ echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-a
 cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
 
 echo "---> Copy current application mbed_lib.json to /root/Share/${EPOCH_TIME}-application-mbed_lib.json"
-cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+cp mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+
+echo "---> Copy current application tools/mbed_lib.json to /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json"
+cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json
 
 echo "---> Compile first mbed client"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
@@ -234,6 +242,9 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     cp mbed_app.json /root/Share/${EPOCH_TIME}-update-mbed_app.json
 
     echo "---> Copy current update mbed_lib.json to /root/Share/${EPOCH_TIME}-update-mbed_lib.json"
+    cp mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+
+    echo "---> Copy current update tools/mbed_lib.json to /root/Share/${EPOCH_TIME}-update-tools-mbed_lib.json"
     cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-update-mbed_lib.json
 
     echo "---> Compile upgrade image"

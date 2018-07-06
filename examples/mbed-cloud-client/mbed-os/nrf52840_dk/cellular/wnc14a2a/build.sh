@@ -194,6 +194,12 @@ echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json rela
 # jq '."MCU_NRF52840"."macros" |= map(select(. != "MBEDTLS_CONFIG_HW_SUPPORT"))' mbed-os/targets/targets.json | sponge mbed-os/targets/targets.json
 jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
 
+echo "---> Set ${TARGET_NAME} SOTP details in mbed_lib.json"
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "(APPLICATION_ADDR+1016*1024)"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "(4*1024)"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "(APPLICATION_ADDR+1020*1024)"' mbed_lib.json | sponge mbed_lib.json
+jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "(4*1024)"' mbed_lib.json | sponge mbed_lib.json
+
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
     cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
@@ -203,7 +209,10 @@ echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-a
 cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
 
 echo "---> Copy current application mbed_lib.json to /root/Share/${EPOCH_TIME}-application-mbed_lib.json"
-cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+cp mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+
+echo "---> Copy current application tools/mbed_lib.json to /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json"
+cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json
 
 echo "---> Compile first mbed client"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
@@ -226,6 +235,9 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     cp mbed_app.json /root/Share/${EPOCH_TIME}-update-mbed_app.json
 
     echo "---> Copy current update mbed_lib.json to /root/Share/${EPOCH_TIME}-update-mbed_lib.json"
+    cp mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
+
+    echo "---> Copy current update tools/mbed_lib.json to /root/Share/${EPOCH_TIME}-update-tools-mbed_lib.json"
     cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-update-mbed_lib.json
 
     echo "---> Compile upgrade image"
