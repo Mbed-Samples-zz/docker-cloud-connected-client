@@ -194,6 +194,10 @@ jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" =
 echo "---> Disable auto partitioning"
 jq '.target_overrides."*"."auto_partition" = 1' mbed_lib.json | sponge mbed_lib.json
 
+echo "---> Disable auto formatting"
+jq '."config"."mcc-no-auto-format"."help" = "If this is not null autoformat will occur"' mbed_app.json | sponge mbed_app.json
+jq '."config"."mcc-no-auto-format"."value" = 1' mbed_app.json | sponge mbed_app.json
+
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
 echo "---> Set nordic.uart_0_fifo_size = 1024"
