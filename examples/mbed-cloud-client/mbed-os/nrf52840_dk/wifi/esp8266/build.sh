@@ -11,7 +11,9 @@ MBED_CLOUD_VERSION=1.3.3
 MBED_CLOUD_UPDATE_EPOCH=0
 MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
-BUILD_PROFILE=release
+APP_BUILD_PROFILE=release
+UPGRADE_BUILD_PROFILE=profiles/debug_size.json
+BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 
 MBED_OS_VERSION=master
 MBED_OS_COMPILER=GCC_ARM
@@ -72,16 +74,41 @@ jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"'
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x35000"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."application-start-address" = "0x35400"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x3B000"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."application-start-address" = "0x3B400"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."max-application-size" = "DEFAULT_MAX_APPLICATION_SIZE"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
+
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
+
+echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
+
+echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set '${TARGET_NAME}' target.macros_add"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Copy current bootloader mbed_app.json to /root/Share/${EPOCH_TIME}-bootloader-mbed_app.json"
 cp mbed_app.json /root/Share/${EPOCH_TIME}-bootloader-mbed_app.json
 
+echo "---> Add the spif-driver to use SPI flash"
+mbed add spif-driver
+
+echo "---> Include to use SPI flash SPIF driver"
+sed -r -i -e 's/#include "SDBlockDevice.h"/#include "SPIFBlockDevice.h"/' source/main.cpp
+
+# Not elegant need to improve
+echo "---> Switch bootloader to use SPI flash SPIF driver"
+sed -r -i -e 's/SDBlockDevice sd\(MBED_CONF_SD_SPI_MOSI, MBED_CONF_SD_SPI_MISO,/SPIFBlockDevice sd\(MBED_CONF_SPIF_DRIVER_SPI_MOSI, MBED_CONF_SPIF_DRIVER_SPI_MISO,/' source/main.cpp
+sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/                   MBED_CONF_SPIF_DRIVER_SPI_CLK, MBED_CONF_SPIF_DRIVER_SPI_CS\);/' source/main.cpp
+
+
 echo "---> Compile mbed bootloader"
-mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile minimal-printf/profiles/release.json >> mbed-compile-bootloader.log
+mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} >> mbed-compile-bootloader.log
 
 ######################### MANIFEST TOOL #########################
 
@@ -143,10 +170,10 @@ echo "---> Copy managed bootloader automatic application header mbed_lib.json to
 cp /root/Config/mbed_lib.json tools/
 
 echo "---> Add target.app_offset in mbed_lib.json"
-jq '.target_overrides."*"."target.app_offset" = "0x35400"' tools/mbed_lib.json | sponge tools/mbed_lib.json
+jq '.target_overrides."*"."target.app_offset" = "0x3B400"' tools/mbed_lib.json | sponge tools/mbed_lib.json
 
 echo "---> Add target.header_offset in mbed_lib.json"
-jq '.target_overrides."*"."target.header_offset" = "0x35000"' tools/mbed_lib.json | sponge tools/mbed_lib.json
+jq '.target_overrides."*"."target.header_offset" = "0x3B000"' tools/mbed_lib.json | sponge tools/mbed_lib.json
 
 echo "---> Add ${TARGET_NAME}.target.bootloader_img in mbed_app.json"
 jq '.target_overrides."'${TARGET_NAME}'"."target.bootloader_img" = "tools/mbed-bootloader-'${TARGET_NAME}'.hex"' mbed_app.json | sponge mbed_app.json
@@ -222,7 +249,7 @@ echo "---> Copy current application tools/mbed_lib.json to /root/Share/${EPOCH_T
 cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json
 
 echo "---> Compile first mbed client"
-mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
+mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${APP_BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
 
 echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
 cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
@@ -248,7 +275,7 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-update-mbed_lib.json
 
     echo "---> Compile upgrade image"
-    mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
+    mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${UPGRADE_BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
 
     echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
     cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
