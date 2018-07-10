@@ -150,7 +150,7 @@ echo "---> Copy wifi mbed_app.json config"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
-jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
 sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
