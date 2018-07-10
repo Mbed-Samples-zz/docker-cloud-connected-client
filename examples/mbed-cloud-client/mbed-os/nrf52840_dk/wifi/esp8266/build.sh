@@ -27,7 +27,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
-UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
+# UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
     echo "---> Define WIFI_SSID in your .env file"
@@ -105,7 +105,6 @@ sed -r -i -e 's/#include "SDBlockDevice.h"/#include "SPIFBlockDevice.h"/' source
 echo "---> Switch bootloader to use SPI flash SPIF driver"
 sed -r -i -e 's/SDBlockDevice sd\(MBED_CONF_SD_SPI_MOSI, MBED_CONF_SD_SPI_MISO,/SPIFBlockDevice sd\(MBED_CONF_SPIF_DRIVER_SPI_MOSI, MBED_CONF_SPIF_DRIVER_SPI_MISO,/' source/main.cpp
 sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/                   MBED_CONF_SPIF_DRIVER_SPI_CLK, MBED_CONF_SPIF_DRIVER_SPI_CS\);/' source/main.cpp
-
 
 echo "---> Compile mbed bootloader"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} >> mbed-compile-bootloader.log
@@ -232,6 +231,11 @@ jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"'
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_lib.json | sponge mbed_lib.json
 jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
+
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x3B000"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
