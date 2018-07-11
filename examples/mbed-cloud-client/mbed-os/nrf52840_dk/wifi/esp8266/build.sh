@@ -27,7 +27,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
-# UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
+UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
     echo "---> Define WIFI_SSID in your .env file"
@@ -150,7 +150,7 @@ echo "---> Copy wifi mbed_app.json config"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
-jq '.target_overrides."*"."mbed-trace.enable" = 1' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
 sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
@@ -276,12 +276,6 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "---> Copy current update mbed_app.json to /root/Share/${EPOCH_TIME}-update-mbed_app.json"
     cp mbed_app.json /root/Share/${EPOCH_TIME}-update-mbed_app.json
 
-    echo "---> Copy current update mbed_lib.json to /root/Share/${EPOCH_TIME}-update-mbed_lib.json"
-    cp mbed_lib.json /root/Share/${EPOCH_TIME}-application-mbed_lib.json
-
-    echo "---> Copy current update tools/mbed_lib.json to /root/Share/${EPOCH_TIME}-update-tools-mbed_lib.json"
-    cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-update-mbed_lib.json
-
     echo "---> Compile upgrade image"
     mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${UPGRADE_BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
 
@@ -295,6 +289,9 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "cd /root/Download/manifest_tool"
     echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
+
+echo "---> Copy ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
+cp -R /root/Source /root/Share/${EPOCH_TIME}-Source
 
 echo "---> Keeping the container running with a tail of the build logs"
 tail -f /root/epoch_time.txt
