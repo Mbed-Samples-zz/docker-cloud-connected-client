@@ -83,6 +83,11 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
 
+# note: this is not needed for the client since it calls the driver to get
+# this information
+echo "---> Set the block/page size on the SOTP region"
+jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-page" = 1' mbed_app.json | sponge mbed_app.json
+
 echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
 
@@ -199,7 +204,7 @@ jq '."config"."mcc-no-auto-format"."value" = null' mbed_app.json | sponge mbed_a
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
-echo "---> Set nordic.uart_0_fifo_size = 1024"
+echo "---> Set nordic.uart_0_fifo_size = 2048"
 jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_0_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set nordic.uart_1_fifo_size = 1024"
@@ -236,6 +241,7 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" =
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
+
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
@@ -290,8 +296,9 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
-echo "---> Copy ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
+echo "---> Copy manifest-tool ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
 cp -R /root/Source /root/Share/${EPOCH_TIME}-Source
+cp -R /root/Download/manifest-tool /root/Share/${EPOCH_TIME}-Source
 
 echo "---> Keeping the container running with a tail of the build logs"
 tail -f /root/epoch_time.txt
