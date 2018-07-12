@@ -296,9 +296,9 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
-echo "---> Copy manifest-tool ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
+echo "---> Copy manifest_tool ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
 cp -R /root/Source /root/Share/${EPOCH_TIME}-Source
-cp -R /root/Download/manifest-tool /root/Share/${EPOCH_TIME}-Source
+cp -R /root/Download/manifest_tool /root/Share/${EPOCH_TIME}-Source
 
 echo "---> Keeping the container running with a tail of the build logs"
 tail -f /root/epoch_time.txt
