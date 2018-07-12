@@ -200,7 +200,7 @@ jq '.target_overrides."*"."auto_partition" = 1' mbed_lib.json | sponge mbed_lib.
 
 echo "---> Disable auto formatting"
 jq '."config"."mcc-no-auto-format"."help" = "If this is null autoformat will occur"' mbed_app.json | sponge mbed_app.json
-jq '."config"."mcc-no-auto-format"."value" = null' mbed_app.json | sponge mbed_app.json
+jq '."config"."mcc-no-auto-format"."value" = 1' mbed_app.json | sponge mbed_app.json
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
