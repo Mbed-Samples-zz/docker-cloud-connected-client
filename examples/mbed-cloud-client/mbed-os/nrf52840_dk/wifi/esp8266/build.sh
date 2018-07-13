@@ -7,7 +7,7 @@ EPOCH_TIME=$(cat /root/epoch_time.txt)
 EASY_CONNECT_VERSION=master
 ESP8266_VERSION=master
 
-MBED_CLOUD_VERSION=1.3.3
+MBED_CLOUD_VERSION=1.4.0
 MBED_CLOUD_UPDATE_EPOCH=0
 MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
@@ -204,11 +204,11 @@ jq '."config"."mcc-no-auto-format"."value" = 1' mbed_app.json | sponge mbed_app.
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
-echo "---> Set nordic.uart_0_fifo_size = 2048"
-jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_0_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
+# echo "---> Set nordic.uart_0_fifo_size = 2048"
+# jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_0_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
 
-echo "---> Set nordic.uart_1_fifo_size = 1024"
-jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_1_fifo_size" = 1024' mbed_app.json | sponge mbed_app.json
+# echo "---> Set nordic.uart_1_fifo_size = 1024"
+# jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_1_fifo_size" = 1024' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set nordic.uart_dma_size = 32"
 jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_dma_size" = 32' mbed_app.json | sponge mbed_app.json
