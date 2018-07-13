@@ -198,9 +198,9 @@ jq '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" =
 echo "---> Disable auto partitioning"
 jq '.target_overrides."*"."auto_partition" = 1' mbed_lib.json | sponge mbed_lib.json
 
-echo "---> Disable auto formatting"
+echo "---> Enable auto formatting"
 jq '."config"."mcc-no-auto-format"."help" = "If this is null autoformat will occur"' mbed_app.json | sponge mbed_app.json
-jq '."config"."mcc-no-auto-format"."value" = 1' mbed_app.json | sponge mbed_app.json
+jq '."config"."mcc-no-auto-format"."value" = null' mbed_app.json | sponge mbed_app.json
 
 # New serial buffer documentation
 # https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
@@ -273,6 +273,10 @@ cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example.hex /root/
 
 # Check for an upgrade image name and build a second image
 if [ "$UPGRADE_IMAGE_NAME" ]; then
+    echo "---> Disable auto formatting"
+    jq '."config"."mcc-no-auto-format"."help" = "If this is null autoformat will occur"' mbed_app.json | sponge mbed_app.json
+    jq '."config"."mcc-no-auto-format"."value" = 1' mbed_app.json | sponge mbed_app.json
+
     echo "---> Change LED blink to LED2 in mbed_app.json"
     jq '.config."led-pinname"."value" = "LED2"' mbed_app.json | sponge mbed_app.json
 
