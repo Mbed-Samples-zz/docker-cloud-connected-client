@@ -4,6 +4,23 @@ echo "Create epoch time file /root/epoch_time.txt"
 date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
+echo "---> Make Source Download dirs"
+mkdir -p /root/Source /root/Download/manifest_tool /root/.ssh
+
+echo "---> Copy over id_rsa private key, and set permissions"
+cp /root/Creds/id_rsa /root/.ssh/id_rsa
+
+echo "---> Create known_hosts"
+touch /root/.ssh/known_hosts
+
+echo "---> Add GitHub server key to known_hosts"
+ssh-keyscan github.com >> /root/.ssh/known_hosts
+
+echo "---> Create .netrc for cloning private GitHub repos"
+echo "machine github.com" > /root/.netrc
+echo "login ${GITHUB_USER}" >> /root/.netrc
+echo "password ${GITHUB_TOKEN}" >> /root/.netrc
+
 EASY_CONNECT_VERSION=master
 ESP8266_VERSION=master
 
@@ -26,11 +43,8 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
-COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.wnc14a2a
+COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.els61
 UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
-
-echo "---> Make Source Download dirs"
-mkdir -p /root/Source /root/Download/manifest_tool
 
 ######################## BOOTLOADER #########################
 
@@ -128,6 +142,9 @@ cd /root/Source
 echo "---> Clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}"
 git clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}.git
 
+echo "---> Clone ${GITHUB_URI}/ciot-example for Gemalto drivers"
+git clone ${GITHUB_URI}/ciot-example.git
+
 echo "---> cd /root/Source/${CLIENT_GITHUB_REPO}"
 cd /root/Source/${CLIENT_GITHUB_REPO}
 
@@ -136,6 +153,9 @@ mbed deploy ${MBED_CLOUD_VERSION}
 
 echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
 mbed update ${MBED_CLOUD_VERSION}
+
+echo "---> Copy Gemalto drivers to ${CLIENT_GITHUB_REPO} project"
+cp -R /root/Source/ciot-example/source/cellular/targets/GEMALTO mbed-os/features/cellular/framework/targets
 
 echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
 cp /root/Download/manifest_tool/update_default_resources.c .
@@ -148,8 +168,46 @@ echo "---> Get WNC config and save to mbed_app.json"
 wget -O mbed_app.json https://raw.githubusercontent.com/jflynn129/mbed-cloud-client-example/aedf5dd07e9dfb6502e803cd4a05e30f2c889a4f/wnc14a2a.json
 
 # https://github.com/Avnet/wnc14a2a-driver/#90928b81747ef4b0fb4fdd94705142175e014b30
-echo "---> Set up WNC config in mbed_app.json"
-jq '.config."network-interface"."value" = "CELLULAR_WNC14A2A"' mbed_app.json | sponge mbed_app.json
+echo "---> Set up CELLULAR interface config in mbed_app.json"
+jq '.config."network-interface"."value" = "CELLULAR"' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set CELLULAR_DEVICE=GEMALTO_ELS61 '${TARGET_NAME}' target.macros_add"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set up cellular options in mbed_app.json"
+jq '."config"."sock-type" = "tcp"' mbed_app.json | sponge mbed_app.json
+
+jq '."config"."sim-pin-code"."help" = "SIM PIN code"' mbed_app.json | sponge mbed_app.json
+jq '."config"."sim-pin-code"."value" = "\"1234\""' mbed_app.json | sponge mbed_app.json
+
+jq '."config"."apn"."help" = "The APN string to use for this SIM/network, set to 0 if none"' mbed_app.json | sponge mbed_app.json
+jq '."config"."apn"."value" = 0' mbed_app.json | sponge mbed_app.json
+
+jq '."config"."username"."help" = "The user name string to use for this APN, set to zero if none"' mbed_app.json | sponge mbed_app.json
+jq '."config"."username"."value" = 0' mbed_app.json | sponge mbed_app.json
+
+jq '."config"."password"."help" = "The password string to use for this APN, set to zero if none"' mbed_app.json | sponge mbed_app.json
+jq '."config"."password"."value" = 0' mbed_app.json | sponge mbed_app.json
+
+jq '."config"."trace-level"."help" = "Options are TRACE_LEVEL_ERROR,TRACE_LEVEL_WARN,TRACE_LEVEL_INFO,TRACE_LEVEL_DEBUG"' mbed_app.json | sponge mbed_app.json
+jq '."config"."trace-level"."value" = "TRACE_LEVEL_DEBUG"' mbed_app.json | sponge mbed_app.json
+jq '."config"."trace-level"."macro_name" = "MBED_TRACE_MAX_LEVEL"' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set cellular ${TARGET_NAME} overrides"
+jq '."target_overrides"."'${TARGET_NAME}'"."ppp-cell-iface.apn-lookup" = false' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."cellular.use-apn-lookup" = false' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."features_add" = ["LWIP"]' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ipv4-enabled" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ethernet-enabled" = false' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ppp-enabled" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."lwip.tcp-enabled" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."cellular.debug-at" = true' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set platform.stdio ${TARGET_NAME} overrides"
+jq '."target_overrides"."'${TARGET_NAME}'"."platform.stdio-convert-newlines" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."platform.stdio-baud-rate" = 115200' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."platform.stdio-buffered-serial" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."platform.default-serial-baud-rate" = 115200' mbed_app.json | sponge mbed_app.json
 
 ########## SERIAL CONFIG ##########
 #
@@ -174,10 +232,6 @@ jq 'del(.target_overrides."*"."drivers.uart-serial-rxbuf-size")' mbed_app.json |
 #
 #
 ########## SERIAL CONFIG ##########
-
-echo "---> Set up WNC debug in mbed_app.json"
-jq '.config."wnc_debug"."value" = 0' mbed_app.json | sponge mbed_app.json
-jq '.config."wnc_debug_setting"."value" = "0x0c"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
@@ -246,7 +300,6 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" =
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
-
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
