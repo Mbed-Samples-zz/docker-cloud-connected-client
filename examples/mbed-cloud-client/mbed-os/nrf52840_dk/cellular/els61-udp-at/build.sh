@@ -43,7 +43,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
-COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.els61
+COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.els61.udp.at
 UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 ######################## BOOTLOADER #########################
@@ -175,7 +175,7 @@ echo "---> Set CELLULAR_DEVICE=GEMALTO_ELS61 '${TARGET_NAME}' target.macros_add"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set up cellular options in mbed_app.json"
-jq '."config"."sock-type" = "tcp"' mbed_app.json | sponge mbed_app.json
+jq '."config"."sock-type" = "udp"' mbed_app.json | sponge mbed_app.json
 
 jq '."config"."sim-pin-code"."help" = "SIM PIN code"' mbed_app.json | sponge mbed_app.json
 jq '."config"."sim-pin-code"."value" = "\"1234\""' mbed_app.json | sponge mbed_app.json
@@ -198,7 +198,7 @@ jq '."target_overrides"."'${TARGET_NAME}'"."ppp-cell-iface.apn-lookup" = false' 
 jq '."target_overrides"."'${TARGET_NAME}'"."cellular.use-apn-lookup" = false' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ipv4-enabled" = true' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ethernet-enabled" = false' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ppp-enabled" = true' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ppp-enabled" = false' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.tcp-enabled" = true' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."cellular.debug-at" = true' mbed_app.json | sponge mbed_app.json
 

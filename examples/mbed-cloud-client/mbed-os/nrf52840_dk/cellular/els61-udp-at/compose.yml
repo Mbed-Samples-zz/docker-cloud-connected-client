@@ -8,4 +8,4 @@ services:
       - "$PWD/:/root/Config"
       - "../creds:/root/Creds"
       - "../share:/root/Share"
-    container_name: mbed-os.nrf52840_dk.cellular.els61
+    container_name: mbed-os.nrf52840_dk.cellular.els61.udp.at
