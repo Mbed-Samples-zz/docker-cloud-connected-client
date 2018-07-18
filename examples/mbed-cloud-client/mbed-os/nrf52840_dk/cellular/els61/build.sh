@@ -4,7 +4,7 @@ echo "Create epoch time file /root/epoch_time.txt"
 date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
-echo "---> Make Source Download dirs"
+echo "---> Make Source Download .ssh dirs"
 mkdir -p /root/Source /root/Download/manifest_tool /root/.ssh
 
 echo "---> Copy over id_rsa private key, and set permissions"
@@ -101,7 +101,7 @@ echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json rela
 jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Copy current bootloader mbed_app.json to /root/Share/${EPOCH_TIME}-bootloader-mbed_app.json"
 cp mbed_app.json /root/Share/${EPOCH_TIME}-bootloader-mbed_app.json
@@ -172,7 +172,7 @@ echo "---> Set up CELLULAR interface config in mbed_app.json"
 jq '.config."network-interface"."value" = "CELLULAR"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set CELLULAR_DEVICE=GEMALTO_ELS61 '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set up cellular options in mbed_app.json"
 jq '."config"."sock-type" = "tcp"' mbed_app.json | sponge mbed_app.json
@@ -196,7 +196,6 @@ jq '."config"."trace-level"."macro_name" = "MBED_TRACE_MAX_LEVEL"' mbed_app.json
 echo "---> Set cellular ${TARGET_NAME} overrides"
 jq '."target_overrides"."'${TARGET_NAME}'"."ppp-cell-iface.apn-lookup" = false' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."cellular.use-apn-lookup" = false' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."features_add" = ["LWIP"]' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ipv4-enabled" = true' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ethernet-enabled" = false' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."lwip.ppp-enabled" = true' mbed_app.json | sponge mbed_app.json
@@ -279,7 +278,7 @@ echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" = ["MBEDTLS_USER_CONFIG_FILE=\"mbedTLSConfig_mbedOS.h\"", "PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["MBEDTLS_USER_CONFIG_FILE=\"mbedTLSConfig_mbedOS.h\"", "PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
