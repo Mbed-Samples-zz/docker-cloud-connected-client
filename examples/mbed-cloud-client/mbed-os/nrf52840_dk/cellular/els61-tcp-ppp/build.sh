@@ -171,6 +171,9 @@ wget -O mbed_app.json https://raw.githubusercontent.com/jflynn129/mbed-cloud-cli
 echo "---> Set up CELLULAR interface config in mbed_app.json"
 jq '.config."network-interface"."value" = "CELLULAR"' mbed_app.json | sponge mbed_app.json
 
+echo "---> Add LWIP feature"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.features_add" |= . + ["LWIP"]' mbed_app.json | sponge mbed_app.json
+
 echo "---> Set CELLULAR_DEVICE=GEMALTO_ELS61 '${TARGET_NAME}' target.macros_add"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
 
