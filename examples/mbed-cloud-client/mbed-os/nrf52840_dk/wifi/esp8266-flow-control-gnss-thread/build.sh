@@ -159,6 +159,18 @@ cp configs/wifi_esp8266_v4.json mbed_app.json
 echo "---> Clone location thread GIST"
 git clone https://gist.github.com/dlfryar/1cb68b8e218f62c3afd6c8537d4567fa location-thread
 
+echo "---> Add the u-blox gnss driver"
+mbed add http://os.mbed.com/teams/ublox/code/gnss/
+
+echo "---> Modify u-blox driver for module use"
+# Change pin to not connected ince we don't have an EN pin
+sed -ie 's/    _gnssEnable = new DigitalInOut(GNSSEN, PIN_OUTPUT, PullNone, 1);/    _gnssEnable = new DigitalInOut(NC, PIN_OUTPUT, PullNone, 1);/' gnss/gnss.cpp
+# Remove the powerOn call that will hang since there is no EN signal
+sed -ie 's/    _powerOn();/    \/\/ _powerOn();/' gnss/gnss.cpp
+
+echo "---> Change the u-blox I2C freq. to 400kHz"
+sed -ie 's/    frequency(100000);/    frequency(400000);/' gnss/gnss.cpp
+
 echo "---> Update main.cpp to start location thread"
 mv location-thread/main.cpp .
 
