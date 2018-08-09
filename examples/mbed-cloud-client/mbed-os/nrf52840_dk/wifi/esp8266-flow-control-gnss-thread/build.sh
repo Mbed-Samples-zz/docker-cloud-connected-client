@@ -147,6 +147,15 @@ mbed deploy ${MBED_CLOUD_VERSION}
 echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
 mbed update ${MBED_CLOUD_VERSION}
 
+echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
+cp /root/Download/manifest_tool/update_default_resources.c .
+
+echo "---> Copy mbed_cloud_dev_credentials.c to project"
+cp /root/Creds/mbed_cloud_dev_credentials.c .
+
+echo "---> Copy wifi mbed_app.json config"
+cp configs/wifi_esp8266_v4.json mbed_app.json
+
 echo "---> Clone location thread GIST"
 git clone https://gist.github.com/dlfryar/1cb68b8e218f62c3afd6c8537d4567fa location-thread
 
@@ -156,15 +165,6 @@ mv location-thread/main.cpp .
 # https://stackoverflow.com/questions/19529688/how-to-merge-2-json-file-using-jq
 echo "---> Add location thread to mbed_app.json by merging"
 jq -s '.[0] * .[1]' location-thread/location_mbed_app.json mbed_app.json | sponge mbed_app.json
-
-echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
-cp /root/Download/manifest_tool/update_default_resources.c .
-
-echo "---> Copy mbed_cloud_dev_credentials.c to project"
-cp /root/Creds/mbed_cloud_dev_credentials.c .
-
-echo "---> Copy wifi mbed_app.json config"
-cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
