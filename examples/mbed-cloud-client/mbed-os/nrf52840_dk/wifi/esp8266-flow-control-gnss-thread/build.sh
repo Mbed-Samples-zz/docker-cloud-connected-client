@@ -5,7 +5,7 @@ date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
 EASY_CONNECT_VERSION=master
-ESP8266_VERSION=master
+ESP8266_VERSION=feature-hw_flow_control
 STORAGE_SELECTOR_VERSION=blockdevice_namespace
 
 MBED_CLOUD_VERSION=1.4.0
@@ -28,7 +28,7 @@ STORAGE_SELECTOR_REPO="https://github.com/juhoeskeli/storage-selector.git"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
-COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
+COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266.flow.control.gnss.thread
 UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
@@ -147,6 +147,16 @@ mbed deploy ${MBED_CLOUD_VERSION}
 echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
 mbed update ${MBED_CLOUD_VERSION}
 
+echo "---> Clone location thread GIST"
+git clone https://gist.github.com/dlfryar/1cb68b8e218f62c3afd6c8537d4567fa location-thread
+
+echo "---> Update main.cpp to start location thread"
+mv location-thread/main.cpp .
+
+# https://stackoverflow.com/questions/19529688/how-to-merge-2-json-file-using-jq
+echo "---> Add location thread to mbed_app.json by merging"
+jq -s '.[0] * .[1]' location-thread/location_mbed_app.json mbed_app.json | sponge mbed_app.json
+
 echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
 cp /root/Download/manifest_tool/update_default_resources.c .
 
@@ -167,6 +177,10 @@ jq '.config."wifi-ssid".value = "\"'"${WIFI_SSID}"'\""' mbed_app.json | sponge m
 
 echo "---> Set wifi password in config"
 jq '.config."wifi-password".value = "\"'"${WIFI_PASS}"'\""' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set ESP8266 RTS/CTS hwardware flow control in config"
+jq '.config."ESP8266-RTS".value = "D2"' mbed_app.json | sponge mbed_app.json
+jq '.config."ESP8266-CTS".value = "D3"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -243,7 +257,6 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" =
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
-
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"

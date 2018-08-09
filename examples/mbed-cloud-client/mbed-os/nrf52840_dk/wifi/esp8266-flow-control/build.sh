@@ -5,7 +5,7 @@ date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
 EASY_CONNECT_VERSION=master
-ESP8266_VERSION=master
+ESP8266_VERSION=feature-hw_flow_control
 STORAGE_SELECTOR_VERSION=blockdevice_namespace
 
 MBED_CLOUD_VERSION=1.4.0
@@ -28,7 +28,7 @@ STORAGE_SELECTOR_REPO="https://github.com/juhoeskeli/storage-selector.git"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
-COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
+COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266.flow.control
 UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
@@ -167,6 +167,10 @@ jq '.config."wifi-ssid".value = "\"'"${WIFI_SSID}"'\""' mbed_app.json | sponge m
 
 echo "---> Set wifi password in config"
 jq '.config."wifi-password".value = "\"'"${WIFI_PASS}"'\""' mbed_app.json | sponge mbed_app.json
+
+echo "---> Set ESP8266 RTS/CTS hwardware flow control in config"
+jq '.config."ESP8266-RTS".value = "D2"' mbed_app.json | sponge mbed_app.json
+jq '.config."ESP8266-CTS".value = "D3"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
