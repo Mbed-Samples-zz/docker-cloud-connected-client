@@ -26,8 +26,8 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
-COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266
-UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
+COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266.gnss.thread
+# UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
     echo "---> Define WIFI_SSID in your .env file"
@@ -154,6 +154,28 @@ cp /root/Creds/mbed_cloud_dev_credentials.c .
 echo "---> Copy wifi mbed_app.json config"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
+echo "---> Clone location thread GIST"
+git clone https://gist.github.com/dlfryar/1cb68b8e218f62c3afd6c8537d4567fa location-thread
+
+echo "---> Add the u-blox gnss driver"
+mbed add http://os.mbed.com/teams/ublox/code/gnss/
+
+echo "---> Modify u-blox driver for module use"
+# Change pin to not connected ince we don't have an EN pin
+sed -ie 's/    _gnssEnable = new DigitalInOut(GNSSEN, PIN_OUTPUT, PullNone, 1);/    _gnssEnable = new DigitalInOut(NC, PIN_OUTPUT, PullNone, 1);/' gnss/gnss.cpp
+# Remove the powerOn call that will hang since there is no EN signal
+sed -ie 's/    _powerOn();/    \/\/ _powerOn();/' gnss/gnss.cpp
+
+echo "---> Change the u-blox I2C freq. to 400kHz"
+sed -ie 's/    frequency(100000);/    frequency(400000);/' gnss/gnss.cpp
+
+echo "---> Update main.cpp to start location thread"
+mv location-thread/main.cpp .
+
+# https://stackoverflow.com/questions/19529688/how-to-merge-2-json-file-using-jq
+echo "---> Add location thread to mbed_app.json by merging"
+jq -s '.[0] * .[1]' location-thread/location_mbed_app.json mbed_app.json | sponge mbed_app.json
+
 echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
 
@@ -241,7 +263,6 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" =
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
-
 
 if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"

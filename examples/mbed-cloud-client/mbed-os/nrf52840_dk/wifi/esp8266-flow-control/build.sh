@@ -5,8 +5,7 @@ date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
 EASY_CONNECT_VERSION=master
-ESP8266_VERSION=feature-hw_flow_control
-STORAGE_SELECTOR_VERSION=blockdevice_namespace
+ESP8266_VERSION=master
 
 MBED_CLOUD_VERSION=1.4.0
 MBED_CLOUD_UPDATE_EPOCH=0
@@ -24,7 +23,6 @@ TARGET_NAME=NRF52840_DK
 BOOTLOADER_GITHUB_REPO="mbed-bootloader"
 BOOTLOADER_VERSION=v3.3.0
 CLIENT_GITHUB_REPO="mbed-cloud-client-example"
-STORAGE_SELECTOR_REPO="https://github.com/juhoeskeli/storage-selector.git"
 
 GITHUB_URI="https://github.com/ARMmbed"
 
@@ -169,8 +167,8 @@ echo "---> Set wifi password in config"
 jq '.config."wifi-password".value = "\"'"${WIFI_PASS}"'\""' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set ESP8266 RTS/CTS hwardware flow control in config"
-jq '.config."ESP8266-RTS".value = "D2"' mbed_app.json | sponge mbed_app.json
-jq '.config."ESP8266-CTS".value = "D3"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.rts" = "D2"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.cts" = "D3"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -257,19 +255,6 @@ fi
 if [ "$ESP8266_VERSION" ]; then
     echo "---> Run mbed update on ESP8266 driver ${ESP8266_VERSION}"
     cd easy-connect/esp8266-driver && mbed update ${ESP8266_VERSION} && cd ../..
-fi
-
-# https://github.com/ARMmbed/mbed-os/commit/509869dc81843bee710c65725924f7d13bfe7cbe
-# Move BlockDevice classes inside mbed namespace
-echo "---> Remove the old storage selector repo"
-rm -rf storage-selector*
-
-echo "---> Add patched storage selector repo ${STORAGE_SELECTOR_REPO}"
-mbed add ${STORAGE_SELECTOR_REPO}
-
-if [ "$STORAGE_SELECTOR_VERSION" ]; then
-    echo "---> Run mbed update on storage selector ${STORAGE_SELECTOR_VERSION}"
-    cd storage-selector && mbed update ${STORAGE_SELECTOR_VERSION} && cd ..
 fi
 
 echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-application-mbed_app.json"
