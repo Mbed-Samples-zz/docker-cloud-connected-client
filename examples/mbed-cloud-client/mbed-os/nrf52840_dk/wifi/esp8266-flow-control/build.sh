@@ -15,7 +15,7 @@ APP_BUILD_PROFILE=profiles/debug_size.json
 UPGRADE_BUILD_PROFILE=profiles/debug_size.json
 BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 
-MBED_OS_VERSION=master
+MBED_OS_VERSION=mbed-os-5.10
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
@@ -66,6 +66,11 @@ echo "mbed-os/features/cellular/*" >> .mbedignore
 echo "mbed-os/features/lorawan/*" >> .mbedignore
 echo "mbed-os/features/device_key/*" >> .mbedignore
 echo "mbed-os/features/lwipstack/*" >> .mbedignore
+echo "mbed-os/features/nfc/*" >> .mbedignore
+echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
+
+echo "---> Modify .mbedignore add storage dir for >= mbed-os 5.10"
+sed -i '/mbed-os\/features\/storage\/\*/d' .mbedignore
 
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
@@ -144,6 +149,12 @@ mbed deploy ${MBED_CLOUD_VERSION}
 
 echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
 mbed update ${MBED_CLOUD_VERSION}
+
+echo "---> Modify .mbedignore and take out features causing compile errors"
+echo "mbed-os/components/802.15.4_RF/*" >> .mbedignore
+echo "easy-connect/mcr20a-rf-driver/*" >> .mbedignore
+echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
+echo "easy-connect/atmel-rf-driver/*" >> .mbedignore
 
 echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
 cp /root/Download/manifest_tool/update_default_resources.c .

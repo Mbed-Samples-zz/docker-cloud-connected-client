@@ -142,8 +142,8 @@ cd /root/Source
 echo "---> Clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}"
 git clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}.git
 
-echo "---> Clone ${GITHUB_URI}/ciot-example for Gemalto drivers"
-git clone ${GITHUB_URI}/ciot-example.git
+# echo "---> Clone ${GITHUB_URI}/ciot-example for Gemalto drivers"
+# git clone ${GITHUB_URI}/ciot-example.git
 
 echo "---> cd /root/Source/${CLIENT_GITHUB_REPO}"
 cd /root/Source/${CLIENT_GITHUB_REPO}
@@ -154,8 +154,8 @@ mbed deploy ${MBED_CLOUD_VERSION}
 echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
 mbed update ${MBED_CLOUD_VERSION}
 
-echo "---> Copy Gemalto drivers to ${CLIENT_GITHUB_REPO} project"
-cp -R /root/Source/ciot-example/source/cellular/targets/GEMALTO mbed-os/features/cellular/framework/targets
+# echo "---> Copy Gemalto drivers to ${CLIENT_GITHUB_REPO} project"
+# cp -R /root/Source/ciot-example/source/cellular/targets/GEMALTO mbed-os/features/cellular/framework/targets
 
 echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
 cp /root/Download/manifest_tool/update_default_resources.c .
@@ -171,8 +171,8 @@ wget -O mbed_app.json https://raw.githubusercontent.com/jflynn129/mbed-cloud-cli
 echo "---> Set up CELLULAR interface config in mbed_app.json"
 jq '.config."network-interface"."value" = "CELLULAR"' mbed_app.json | sponge mbed_app.json
 
-echo "---> Set CELLULAR_DEVICE=GEMALTO_ELS61 '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_ELS61", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
+echo "---> Set CELLULAR_DEVICE=GEMALTO_CINTERION '${TARGET_NAME}' target.macros_add"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_CINTERION", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set up cellular options in mbed_app.json"
 jq '."config"."sock-type" = "udp"' mbed_app.json | sponge mbed_app.json
