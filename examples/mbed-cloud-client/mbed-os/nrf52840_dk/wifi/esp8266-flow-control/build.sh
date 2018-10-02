@@ -27,7 +27,7 @@ CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.wifi.esp8266.flow.control
-UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
+# UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
 
 if [ -z "$WIFI_SSID" ]; then
     echo "---> Define WIFI_SSID in your .env file"
@@ -262,6 +262,14 @@ if [ "$EASY_CONNECT_VERSION" ]; then
     echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
     cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
 fi
+
+echo "---> Patch the easy-connect debug constructor to add flow control"
+
+sed -ie 's/ESP8266Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_ESP8266_TX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_RX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_DEBUG);/ESP8266Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_ESP8266_TX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_RX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_DEBUG, MBED_CONF_ESP8266_RTS, MBED_CONF_ESP8266_CTS);/' easy-connect/easy-connect.cpp
+
+echo "---> Patch the easy-connect constructor to add flow control"
+
+sed -ie 's/ESP8266Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_ESP8266_TX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_RX);/ESP8266Interface wifi(MBED_CONF_EASY_CONNECT_WIFI_ESP8266_TX, MBED_CONF_EASY_CONNECT_WIFI_ESP8266_RX, MBED_CONF_ESP8266_RTS, MBED_CONF_ESP8266_CTS);/' easy-connect/easy-connect.cpp
 
 if [ "$ESP8266_VERSION" ]; then
     echo "---> Run mbed update on ESP8266 driver ${ESP8266_VERSION}"
