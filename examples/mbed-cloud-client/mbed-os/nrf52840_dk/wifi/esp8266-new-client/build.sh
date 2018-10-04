@@ -105,8 +105,15 @@ jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["PAL_USE_
 echo "---> Copy current bootloader mbed_app.json to ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json"
 cp mbed_app.json ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json
 
+# note commit https://github.com/ARMmbed/spif-driver/commit/ac01c514ebd32cc2fd0c01eb2a5455e11589e36e
+# broke the build so we're going back to a hash.  The code basically say if using mbed 5.10
+# do #error and use the one now in mbed-os
+# https://jira.arm.com/browse/MBEDOSTEST-167
+# The issue is the one in mbed-os does not build properly you must now do
+# #include "mbed-os/components/storage/blockdevice/COMPONENT_SPIF/SPIFBlockDevice.h
+# and the config symbols are not found
 echo "---> Add the spif-driver to use SPI flash"
-mbed add spif-driver
+mbed add https://github.com/ARMmbed/spif-driver/#39a918e5d0bfc7b5e6ab96228cc68e00cc93f9a2
 
 echo "---> Include to use SPI flash SPIF driver"
 sed -r -i -e 's/#include "SDBlockDevice.h"/#include "SPIFBlockDevice.h"/' source/main.cpp
