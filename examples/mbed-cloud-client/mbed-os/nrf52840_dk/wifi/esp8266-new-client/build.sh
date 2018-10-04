@@ -162,7 +162,7 @@ echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
-sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
+sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/mcc_common_button_and_led.cpp
 
 echo "---> Set wifi SSID in config"
 jq '.target_overrides."NRF52840_DK"."nsapi.default-wifi-ssid" = "\"'"${WIFI_SSID}"'\""' mbed_app.json | sponge mbed_app.json
