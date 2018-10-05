@@ -86,9 +86,6 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
 
-echo "---> Adding wifi interface in mbed_app.json"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.network-default-interface-type" = "WIFI"' mbed_app.json | sponge mbed_app.json
-
 # note: this is not needed for the client since it calls the driver to get
 # this information
 echo "---> Set the block/page size on the SOTP region"
@@ -164,6 +161,9 @@ jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbe
 
 echo "---> Change LED to ON"
 sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/mcc_common_button_and_led.cpp
+
+echo "---> Adding wifi interface in mbed_app.json"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.network-default-interface-type" = "WIFI"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set wifi SSID in config"
 jq '.target_overrides."NRF52840_DK"."nsapi.default-wifi-ssid" = "\"'"${WIFI_SSID}"'\""' mbed_app.json | sponge mbed_app.json
