@@ -86,6 +86,7 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
 
+echo "---> Adding wifi interface in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.network-default-interface-type" = "WIFI"' mbed_app.json | sponge mbed_app.json
 
 # note: this is not needed for the client since it calls the driver to get
