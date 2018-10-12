@@ -4,38 +4,27 @@ echo "Create epoch time file /root/epoch_time.txt"
 date +%s > /root/epoch_time.txt
 EPOCH_TIME=$(cat /root/epoch_time.txt)
 
-echo "---> Make Source Download .ssh dirs"
-mkdir -p /root/Source /root/Download/manifest_tool /root/.ssh
+echo "---> Make Source dirs"
+mkdir -p /root/Source
 
 echo "---> Copy over id_rsa private key, and set permissions"
 cp /root/Creds/id_rsa /root/.ssh/id_rsa
 
-echo "---> Create known_hosts"
-touch /root/.ssh/known_hosts
-
-echo "---> Add GitHub server key to known_hosts"
-ssh-keyscan github.com >> /root/.ssh/known_hosts
-
-echo "---> Create .netrc for cloning private GitHub repos"
-echo "machine github.com" > /root/.netrc
-echo "login ${GITHUB_USER}" >> /root/.netrc
-echo "password ${GITHUB_TOKEN}" >> /root/.netrc
-
-EASY_CONNECT_VERSION=master
 ESP8266_VERSION=master
 
-MBED_CLOUD_VERSION=1.4.0
+DEVICE_MANAGEMENT_CLIENT_VERSION=2.0.0
 MBED_CLOUD_UPDATE_EPOCH=0
-MBED_CLOUD_MANIFEST_TOOL_VERSION=master
 
 APP_BUILD_PROFILE=profiles/debug_size.json
 UPGRADE_BUILD_PROFILE=profiles/debug_size.json
 BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 
-MBED_OS_VERSION=master
+MBED_OS_VERSION=mbed-os-5.10
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
+
+EXTRA_BUILD_OPTIONS="--build BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}"
 
 BOOTLOADER_GITHUB_REPO="mbed-bootloader"
 BOOTLOADER_VERSION=v3.3.0
@@ -57,6 +46,10 @@ git clone ${GITHUB_URI}/${BOOTLOADER_GITHUB_REPO}.git
 echo "---> cd /root/Source/${BOOTLOADER_GITHUB_REPO}"
 cd /root/Source/${BOOTLOADER_GITHUB_REPO}
 
+# echo "---> Run mbed config with APIKEY"
+mbed config -G CLOUD_SDK_API_KEY ${MBED_CLOUD_API_KEY}
+mbed device-management init -d "mbed.quickstart.company" --model-name "qs v1" --force -q
+
 echo "---> Run mbed deploy ${BOOTLOADER_VERSION}"
 mbed deploy ${BOOTLOADER_VERSION}
 
@@ -72,6 +65,9 @@ echo "mbed-os/features/cellular/*" >> .mbedignore
 echo "mbed-os/features/lorawan/*" >> .mbedignore
 echo "mbed-os/features/device_key/*" >> .mbedignore
 echo "mbed-os/features/lwipstack/*" >> .mbedignore
+echo "mbed-os/features/nfc/*" >> .mbedignore
+echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
+echo "BUILD/*" >> .mbedignore
 
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
@@ -120,20 +116,6 @@ sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/ 
 echo "---> Compile mbed bootloader"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} >> mbed-compile-bootloader.log
 
-######################### MANIFEST TOOL #########################
-
-echo "---> Install mbed cloud client tools"
-pip install git+${GITHUB_URI}/manifest-tool.git@${MBED_CLOUD_MANIFEST_TOOL_VERSION}
-
-echo "---> cd /root/Download/manifest_tool"
-cd /root/Download/manifest_tool
-
-echo "---> Initialize manifest tool"
-manifest-tool init -d "mbed.quickstart.company" -m "qs v1" -q --force -a ${MBED_CLOUD_API_KEY}
-
-echo "---> Install mbed-cloud-sdk"
-pip install mbed-cloud-sdk
-
 ######################### APPLICATION #########################
 
 echo "---> cd /root/Source"
@@ -142,26 +124,22 @@ cd /root/Source
 echo "---> Clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}"
 git clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}.git
 
-# echo "---> Clone ${GITHUB_URI}/ciot-example for Gemalto drivers"
-# git clone ${GITHUB_URI}/ciot-example.git
-
 echo "---> cd /root/Source/${CLIENT_GITHUB_REPO}"
 cd /root/Source/${CLIENT_GITHUB_REPO}
 
-echo "---> Run mbed deploy ${MBED_CLOUD_VERSION}"
-mbed deploy ${MBED_CLOUD_VERSION}
+echo "---> Run mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}"
+mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}
 
-echo "---> Run mbed update ${MBED_CLOUD_VERSION}"
-mbed update ${MBED_CLOUD_VERSION}
-
-# echo "---> Copy Gemalto drivers to ${CLIENT_GITHUB_REPO} project"
-# cp -R /root/Source/ciot-example/source/cellular/targets/GEMALTO mbed-os/features/cellular/framework/targets
-
-echo "---> cp /root/Download/manifest_tool/update_default_resources.c"
-cp /root/Download/manifest_tool/update_default_resources.c .
+echo "---> Run mbed update ${DEVICE_MANAGEMENT_CLIENT_VERSION}"
+mbed update ${DEVICE_MANAGEMENT_CLIENT_VERSION}
 
 echo "---> Copy mbed_cloud_dev_credentials.c to project"
 cp /root/Creds/mbed_cloud_dev_credentials.c .
+
+echo "---> Modify .mbedignore and take out features causing compile errors"
+echo "mbed-os/components/802.15.4_RF/*" >> .mbedignore
+echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
+echo "BUILD/*" >> .mbedignore
 
 # https://github.com/ARMmbed/mbed-cloud-client-example/pull/17
 echo "---> Get WNC config and save to mbed_app.json"
@@ -236,7 +214,7 @@ echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED to ON"
-sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/common_button_and_led.cpp
+sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/mcc_common_button_and_led.cpp
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -245,11 +223,11 @@ jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
 echo "---> Copy managed bootloader automatic application header mbed_lib.json to tools dir"
 cp /root/Config/mbed_lib.json tools/
 
-echo "---> Add target.app_offset in mbed_lib.json"
-jq '.target_overrides."*"."target.app_offset" = "0x3B400"' tools/mbed_lib.json | sponge tools/mbed_lib.json
+echo "---> Add target.app_offset in mbed_app.json"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.app_offset" = "0x3B400"' mbed_app.json | sponge mbed_app.json
 
-echo "---> Add target.header_offset in mbed_lib.json"
-jq '.target_overrides."*"."target.header_offset" = "0x3B000"' tools/mbed_lib.json | sponge tools/mbed_lib.json
+echo "---> Add target.header_offset in mbed_app.json"
+jq '."target_overrides"."'${TARGET_NAME}'"."target.header_offset" = "0x3B000"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Add ${TARGET_NAME}.target.bootloader_img in mbed_app.json"
 jq '.target_overrides."'${TARGET_NAME}'"."target.bootloader_img" = "tools/mbed-bootloader-'${TARGET_NAME}'.hex"' mbed_app.json | sponge mbed_app.json
@@ -300,11 +278,6 @@ jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
 jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
 
-if [ "$EASY_CONNECT_VERSION" ]; then
-    echo "---> Run mbed update on easy-connect ${EASY_CONNECT_VERSION}"
-    cd easy-connect && mbed update ${EASY_CONNECT_VERSION} && cd ..
-fi
-
 echo "---> Copy current application mbed_app.json to /root/Share/${EPOCH_TIME}-application-mbed_app.json"
 cp mbed_app.json /root/Share/${EPOCH_TIME}-application-mbed_app.json
 
@@ -315,7 +288,7 @@ echo "---> Copy current application tools/mbed_lib.json to /root/Share/${EPOCH_T
 cp tools/mbed_lib.json /root/Share/${EPOCH_TIME}-application-tools-mbed_lib.json
 
 echo "---> Compile first mbed client"
-mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${APP_BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
+mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${APP_BUILD_PROFILE} ${EXTRA_BUILD_OPTIONS} >> ${EPOCH_TIME}-mbed-compile-client.log
 
 echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
 cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
@@ -339,7 +312,7 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     cp mbed_app.json /root/Share/${EPOCH_TIME}-update-mbed_app.json
 
     echo "---> Compile upgrade image"
-    mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${UPGRADE_BUILD_PROFILE} >> ${EPOCH_TIME}-mbed-compile-client.log
+    mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${UPGRADE_BUILD_PROFILE} ${EXTRA_BUILD_OPTIONS} >> ${EPOCH_TIME}-mbed-compile-client.log
 
     echo "---> Copy build log to /root/Share/${EPOCH_TIME}-mbed-compile-client.log"
     cp ${EPOCH_TIME}-mbed-compile-client.log /root/Share
@@ -347,14 +320,12 @@ if [ "$UPGRADE_IMAGE_NAME" ]; then
     echo "---> Copy upgrade image to share ${UPGRADE_IMAGE_NAME}.bin"
     cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example_application.bin /root/Share/${UPGRADE_IMAGE_NAME}.bin
 
-    echo "---> Run upgrade campaign using manifest tool"
-    echo "cd /root/Download/manifest_tool"
-    echo "manifest-tool update device -p /root/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
+    echo "---> Run upgrade campaign using mbed device-management tool"
+    echo "mbed device-management update device -p ~/Share/${UPGRADE_IMAGE_NAME}.bin -D my_connected_device_id"
 fi
 
-echo "---> Copy manifest_tool ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
+echo "---> Copy ${BOOTLOADER_GITHUB_REPO} ${CLIENT_GITHUB_REPO} builds to /root/Share/${EPOCH_TIME}-Source"
 cp -R /root/Source /root/Share/${EPOCH_TIME}-Source
-cp -R /root/Download/manifest_tool /root/Share/${EPOCH_TIME}-Source
 
 echo "---> Keeping the container running with a tail of the build logs"
 tail -f /root/epoch_time.txt
