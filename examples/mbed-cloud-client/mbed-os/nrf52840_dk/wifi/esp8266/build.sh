@@ -6,7 +6,7 @@ EPOCH_TIME=$(cat ~/epoch_time.txt)
 
 ESP8266_VERSION=master
 
-DEVICE_MANAGEMENT_CLIENT_VERSION=2.0.0
+DEVICE_MANAGEMENT_CLIENT_VERSION=2.0.1.1
 
 APP_BUILD_PROFILE=profiles/debug_size.json
 UPGRADE_BUILD_PROFILE=profiles/debug_size.json
@@ -174,8 +174,8 @@ echo "---> Set wifi password in config"
 jq '.target_overrides."NRF52840_DK"."nsapi.default-wifi-password" = "\"'"${WIFI_PASS}"'\""' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set ESP8266 RTS/CTS hwardware flow control in config"
-jq '.target_overrides."NRF52840_DK"."esp8266.rts" = "D2"' mbed_app.json | sponge mbed_app.json
-jq '.target_overrides."NRF52840_DK"."esp8266.cts" = "D3"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.rts" = "NC"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.cts" = "NC"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
