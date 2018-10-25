@@ -20,7 +20,7 @@ TARGET_NAME=NRF52840_DK
 EXTRA_BUILD_OPTIONS="--build BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}"
 
 BOOTLOADER_GITHUB_REPO="mbed-bootloader"
-BOOTLOADER_VERSION=v3.3.0
+BOOTLOADER_VERSION=v3.5.0
 CLIENT_GITHUB_REPO="mbed-cloud-client-example"
 
 GITHUB_URI="https://github.com/ARMmbed"
@@ -56,57 +56,14 @@ mbed deploy ${BOOTLOADER_VERSION}
 echo "---> Run mbed update ${BOOTLOADER_VERSION}"
 mbed update ${BOOTLOADER_VERSION}
 
-echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
-cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
-
-echo "---> Modify .mbedignore and take out features causing compile errors"
-echo "mbed-os/features/nvstore/*" >> .mbedignore
-echo "mbed-os/features/cellular/*" >> .mbedignore
-echo "mbed-os/features/lorawan/*" >> .mbedignore
-echo "mbed-os/features/device_key/*" >> .mbedignore
-echo "mbed-os/features/lwipstack/*" >> .mbedignore
-echo "mbed-os/features/nfc/*" >> .mbedignore
-echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
+echo "---> Modify .mbedignore adding BUILD/* dir"
 echo "BUILD/*" >> .mbedignore
-
-echo "---> Modify .mbedignore add storage dir for >= mbed-os 5.10"
-sed -i '/mbed-os\/features\/storage\/\*/d' .mbedignore
-
-echo "---> Set ${TARGET_NAME} details in mbed_app.json"
-jq '."target_overrides"."'${TARGET_NAME}'"."flash-start-address" = "0x0"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."flash-size" = "(1024*1024)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x3B000"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."application-start-address" = "0x3B400"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."max-application-size" = "DEFAULT_MAX_APPLICATION_SIZE"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
-
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
-
-# note: this is not needed for the client since it calls the driver to get
-# this information
-echo "---> Set the block/page size on the SOTP region"
-jq '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-page" = 1' mbed_app.json | sponge mbed_app.json
-
-echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
-
-echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
-
-echo "---> Set '${TARGET_NAME}' target.macros_add"
-jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Copy current bootloader mbed_app.json to ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json"
 cp mbed_app.json ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json
 
 # note commit https://github.com/ARMmbed/spif-driver/commit/ac01c514ebd32cc2fd0c01eb2a5455e11589e36e
-# broke the build so we're going back to a hash.  The code basically say if using mbed 5.10
+# broke the build so we're going back to a hash.  The code basically says if using mbed 5.10
 # do #error and use the one now in mbed-os
 # https://jira.arm.com/browse/MBEDOSTEST-167
 # The issue is the one in mbed-os does not build properly you must now do
@@ -125,6 +82,8 @@ sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/ 
 
 echo "---> Compile mbed bootloader"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} ${EXTRA_BUILD_OPTIONS} >> mbed-compile-bootloader.log
+
+tail -f ~/epoch_time.txt
 
 ######################### APPLICATION #########################
 
