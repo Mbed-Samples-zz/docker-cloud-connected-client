@@ -12,7 +12,7 @@ APP_BUILD_PROFILE=profiles/debug_size.json
 UPGRADE_BUILD_PROFILE=profiles/debug_size.json
 BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 
-MBED_OS_VERSION=mbed-os-5.10
+MBED_OS_VERSION=mbed-os-5.10.1
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
@@ -137,12 +137,12 @@ git clone ${GITHUB_URI}/${CLIENT_GITHUB_REPO}.git
 echo "---> cd ~/Source/${CLIENT_GITHUB_REPO}"
 cd ~/Source/${CLIENT_GITHUB_REPO}
 
+echo "---> Run mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}"
+mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}
+
 # echo "---> Run mbed config with APIKEY"
 mbed config -G CLOUD_SDK_API_KEY ${MBED_CLOUD_API_KEY}
 mbed device-management init -d "mbed.quickstart.company" --model-name "qs v1" --force -q
-
-echo "---> Run mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}"
-mbed deploy ${DEVICE_MANAGEMENT_CLIENT_VERSION}
 
 echo "---> Run mbed update ${DEVICE_MANAGEMENT_CLIENT_VERSION}"
 mbed update ${DEVICE_MANAGEMENT_CLIENT_VERSION}
@@ -174,8 +174,8 @@ echo "---> Set wifi password in config"
 jq '.target_overrides."NRF52840_DK"."nsapi.default-wifi-password" = "\"'"${WIFI_PASS}"'\""' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set ESP8266 RTS/CTS hwardware flow control in config"
-jq '.target_overrides."NRF52840_DK"."esp8266.rts" = "NC"' mbed_app.json | sponge mbed_app.json
-jq '.target_overrides."NRF52840_DK"."esp8266.cts" = "NC"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.rts" = "D2"' mbed_app.json | sponge mbed_app.json
+jq '.target_overrides."NRF52840_DK"."esp8266.cts" = "D3"' mbed_app.json | sponge mbed_app.json
 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
@@ -231,8 +231,11 @@ jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app
 # echo "---> Set '${TARGET_NAME}' target.macros_add"
 # jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
 
-echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
-cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
+echo "---> Add marcuschangarm remote to mbed-os"
+cd mbed-os && git remote add marcuschangarm https://github.com/marcuschangarm/mbed-os && mbed update fix_flow && cd ..
+
+# echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
+# cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
 
 echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
