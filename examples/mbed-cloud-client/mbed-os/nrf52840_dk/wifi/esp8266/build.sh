@@ -8,11 +8,11 @@ ESP8266_VERSION=master
 
 DEVICE_MANAGEMENT_CLIENT_VERSION=2.0.1.1
 
-APP_BUILD_PROFILE=profiles/debug_size.json
+APP_BUILD_PROFILE=profiles/size.json
 UPGRADE_BUILD_PROFILE=profiles/debug_size.json
 BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 
-MBED_OS_VERSION=mbed-os-5.10.1
+MBED_OS_VERSION=master
 MBED_OS_COMPILER=GCC_ARM
 
 TARGET_NAME=NRF52840_DK
@@ -82,8 +82,6 @@ sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/ 
 
 echo "---> Compile mbed bootloader"
 mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} ${EXTRA_BUILD_OPTIONS} >> mbed-compile-bootloader.log
-
-tail -f ~/epoch_time.txt
 
 ######################### APPLICATION #########################
 
@@ -170,31 +168,18 @@ echo "---> Enable auto formatting"
 jq '."config"."mcc-no-auto-format"."help" = "If this is null autoformat will occur"' mbed_app.json | sponge mbed_app.json
 jq '."config"."mcc-no-auto-format"."value" = null' mbed_app.json | sponge mbed_app.json
 
-# New serial buffer documentation
-# https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
-# echo "---> Set nordic.uart_0_fifo_size = 2048"
-# jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_0_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
-
-# echo "---> Set nordic.uart_1_fifo_size = 1024"
-# jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_1_fifo_size" = 1024' mbed_app.json | sponge mbed_app.json
-
-echo "---> Set nordic.uart_dma_size = 32"
-jq '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_dma_size" = 32' mbed_app.json | sponge mbed_app.json
-
 echo "---> Remove rxbuf from mbed_app.json"
 jq 'del(.target_overrides."*"."drivers.uart-serial-rxbuf-size")' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set ${TARGET_NAME} details in mbed_app.json"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
 
-# echo "---> Set '${TARGET_NAME}' target.macros_add"
-# jq '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["PAL_USE_INTERNAL_FLASH=1","PAL_USE_HW_ROT=0","PAL_USE_HW_RTC=0","PAL_INT_FLASH_NUM_SECTIONS=2"]' mbed_app.json | sponge mbed_app.json
+echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
+cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
 
 echo "---> Add marcuschangarm remote to mbed-os"
-cd mbed-os && git remote add marcuschangarm https://github.com/marcuschangarm/mbed-os && mbed update fix_flow && cd ..
-
-# echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
-# cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
+# cd mbed-os && git remote add marcuschangarm https://github.com/marcuschangarm/mbed-os && mbed update fix_flow && cd ..
+cd mbed-os && git remote add marcuschangarm https://github.com/dlfryar/mbed-os && mbed update NRF52840_DK_bootloader && cd ..
 
 echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
 jq '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json

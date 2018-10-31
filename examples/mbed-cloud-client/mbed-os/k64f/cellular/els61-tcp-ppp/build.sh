@@ -15,7 +15,7 @@ BOOTLOADER_BUILD_PROFILE=minimal-printf/profiles/release.json
 MBED_OS_VERSION=mbed-os-5.10.1
 MBED_OS_COMPILER=GCC_ARM
 
-TARGET_NAME=NRF52840_DK
+TARGET_NAME=K64F
 
 EXTRA_BUILD_OPTIONS="--build BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}"
 
@@ -27,50 +27,6 @@ GITHUB_URI="https://github.com/ARMmbed"
 
 COMBINED_IMAGE_NAME=${EPOCH_TIME}.mbed-os.${TARGET_NAME}.cellular.els61.tcp.ppp
 # UPGRADE_IMAGE_NAME=${COMBINED_IMAGE_NAME}-update
-
-######################## BOOTLOADER #########################
-
-echo "---> cd ~/Source"
-cd ~/Source
-
-echo "---> Clone ${GITHUB_URI}/${BOOTLOADER_GITHUB_REPO}"
-git clone ${GITHUB_URI}/${BOOTLOADER_GITHUB_REPO}.git
-
-echo "---> cd ~/Source/${BOOTLOADER_GITHUB_REPO}"
-cd ~/Source/${BOOTLOADER_GITHUB_REPO}
-
-echo "---> Run mbed deploy ${BOOTLOADER_VERSION}"
-mbed deploy ${BOOTLOADER_VERSION}
-
-echo "---> Run mbed update ${BOOTLOADER_VERSION}"
-mbed update ${BOOTLOADER_VERSION}
-
-echo "---> Modify .mbedignore adding BUILD/* dir"
-echo "BUILD/*" >> .mbedignore
-
-echo "---> Copy current bootloader mbed_app.json to ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json"
-cp mbed_app.json ~/Share/${EPOCH_TIME}-bootloader-mbed_app.json
-
-# note commit https://github.com/ARMmbed/spif-driver/commit/ac01c514ebd32cc2fd0c01eb2a5455e11589e36e
-# broke the build so we're going back to a hash.  The code basically says if using mbed 5.10
-# do #error and use the one now in mbed-os
-# https://jira.arm.com/browse/MBEDOSTEST-167
-# The issue is the one in mbed-os does not build properly you must now do
-# #include "mbed-os/components/storage/blockdevice/COMPONENT_SPIF/SPIFBlockDevice.h
-# and the config symbols are not found
-echo "---> Add the spif-driver to use SPI flash"
-mbed add https://github.com/ARMmbed/spif-driver/#39a918e5d0bfc7b5e6ab96228cc68e00cc93f9a2
-
-echo "---> Include to use SPI flash SPIF driver"
-sed -r -i -e 's/#include "SDBlockDevice.h"/#include "SPIFBlockDevice.h"/' source/main.cpp
-
-# Not elegant need to improve
-echo "---> Switch bootloader to use SPI flash SPIF driver"
-sed -r -i -e 's/SDBlockDevice sd\(MBED_CONF_SD_SPI_MOSI, MBED_CONF_SD_SPI_MISO,/SPIFBlockDevice sd\(MBED_CONF_SPIF_DRIVER_SPI_MOSI, MBED_CONF_SPIF_DRIVER_SPI_MISO,/' source/main.cpp
-sed -r -i -e 's/                 MBED_CONF_SD_SPI_CLK,  MBED_CONF_SD_SPI_CS\);/                   MBED_CONF_SPIF_DRIVER_SPI_CLK, MBED_CONF_SPIF_DRIVER_SPI_CS\);/' source/main.cpp
-
-echo "---> Compile mbed bootloader"
-mbed compile -m ${TARGET_NAME} -t ${MBED_OS_COMPILER} --profile ${BOOTLOADER_BUILD_PROFILE} ${EXTRA_BUILD_OPTIONS} >> mbed-compile-bootloader.log
 
 ######################### APPLICATION #########################
 
@@ -95,7 +51,6 @@ mbed update ${DEVICE_MANAGEMENT_CLIENT_VERSION}
 
 echo "---> Modify .mbedignore and take out features causing compile errors"
 echo "mbed-os/components/802.15.4_RF/*" >> .mbedignore
-echo "mbed-os/components/wifi/esp8266-driver/*" >> .mbedignore
 echo "BUILD/*" >> .mbedignore
 
 echo "---> Copy mbed_cloud_dev_credentials.c to project"
@@ -105,9 +60,8 @@ echo "---> Copy reference config from esp save to mbed_app.json"
 cp configs/wifi_esp8266_v4.json mbed_app.json
 
 echo "---> Remove extra targets in mbed_app.json"
-jq -S 'del(."target_overrides"."STM_EMAC")' mbed_app.json | sponge mbed_app.json
-jq -S 'del(."target_overrides"."K64F")' mbed_app.json | sponge mbed_app.json
 jq -S 'del(."target_overrides"."NUCLEO_F429ZI")' mbed_app.json | sponge mbed_app.json
+jq -S 'del(."target_overrides"."STM_EMAC")' mbed_app.json | sponge mbed_app.json
 
 echo "---> Remove esp8266 vars in mbed_app.json"
  jq -S 'del(."target_overrides"."*"."drivers.uart-serial-txbuf-size")' mbed_app.json | sponge mbed_app.json
@@ -129,7 +83,7 @@ echo "---> Add LWIP feature"
 jq -S '."target_overrides"."'${TARGET_NAME}'"."target.features_add" |= . + ["LWIP"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set CELLULAR_DEVICE=GEMALTO_CINTERION '${TARGET_NAME}' target.macros_add"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_CINTERION", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=D2", "MDMRTS=D3"]' mbed_app.json | sponge mbed_app.json
+jq -S '."target_overrides"."'${TARGET_NAME}'"."target.macros_add" |= . + ["CELLULAR_DEVICE=GEMALTO_CINTERION", "MDMRXD=D0", "MDMTXD=D1", "MDMCTS=NC", "MDMRTS=NC"]' mbed_app.json | sponge mbed_app.json
 
 echo "---> Set up cellular options in mbed_app.json"
 jq -S '."config"."sock-type" = "tcp"' mbed_app.json | sponge mbed_app.json
@@ -165,29 +119,8 @@ jq -S '."target_overrides"."*"."platform.stdio-baud-rate" = 115200' mbed_app.jso
 jq -S '."target_overrides"."*"."platform.stdio-buffered-serial" = true' mbed_app.json | sponge mbed_app.json
 jq -S '."target_overrides"."*"."platform.default-serial-baud-rate" = 115200' mbed_app.json | sponge mbed_app.json
 
-########## SERIAL CONFIG ##########
-#
-#
-# echo "---> Enable increase drivers.uart-serial-txbuf-size mbed_app.json"
-# jq -S '.target_overrides."*"."drivers.uart-serial-txbuf-size" = 4096' mbed_app.json | sponge mbed_app.json
-# jq -S '.target_overrides."*"."drivers.uart-serial-rxbuf-size" = 4096' mbed_app.json | sponge mbed_app.json
-
-# New serial buffer documentation
-# https://github.com/ARMmbed/mbed-os/blob/master/targets/TARGET_NORDIC/TARGET_NRF5x/README.md#customization-1
-# echo "---> Set nordic.uart_0_fifo_size = 2048"
-# jq -S '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_0_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
-
-# echo "---> Set nordic.uart_1_fifo_size = 2048"
-# jq -S '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_1_fifo_size" = 2048' mbed_app.json | sponge mbed_app.json
-
-# echo "---> Set nordic.uart_dma_size = 32"
-# jq -S '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_dma_size" = 32' mbed_app.json | sponge mbed_app.json
-
 echo "---> Remove rxbuf from mbed_app.json"
 jq -S 'del(.target_overrides."*"."drivers.uart-serial-rxbuf-size")' mbed_app.json | sponge mbed_app.json
-#
-#
-########## SERIAL CONFIG ##########
 
 echo "---> Enable mbed-trace.enable in mbed_app.json"
 jq -S '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge mbed_app.json
@@ -195,62 +128,15 @@ jq -S '.target_overrides."*"."mbed-trace.enable" = null' mbed_app.json | sponge 
 echo "---> Change LED blink to LED1 in mbed_app.json"
 jq -S '.config."led-pinname"."value" = "LED1"' mbed_app.json | sponge mbed_app.json
 
-echo "---> Add target.app_offset in mbed_app.json"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.app_offset" = "0x3B400"' mbed_app.json | sponge mbed_app.json
-
-echo "---> Add target.header_offset in mbed_app.json"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.header_offset" = "0x3B000"' mbed_app.json | sponge mbed_app.json
-
-# echo "---> Add ${TARGET_NAME}.target.bootloader_img in mbed_app.json"
-jq -S '.target_overrides."'${TARGET_NAME}'"."target.bootloader_img" = "mbed-os/tools/bootloaders/mbed-bootloader-'${TARGET_NAME}'.hex"' mbed_app.json | sponge mbed_app.json
-
-# Note you implicitly get LITTLEFS with recent code changes
-# https://github.com/ARMmbed/mbed-os/blob/master/features/storage/system_storage/SystemStorage.cpp#L83
-echo "---> Set SPIF storage type"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.components_add" = ["SPIF"]' mbed_app.json | sponge mbed_app.json
-
-echo "---> Remove SD storage type"
-jq -S '.target_overrides."*"."target.components_add" |= . - ["SD"]' mbed_app.json | sponge mbed_app.json
-
-# default is 1GB ifyou don't specify
-echo "---> Set client_app.primary_partition_size"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."client_app.primary_partition_size" = 1048576' mbed_app.json | sponge mbed_app.json
-
 echo "---> Enable auto formatting"
 jq -S '."config"."mcc-no-auto-format"."help" = "If this is null autoformat will occur"' mbed_app.json | sponge mbed_app.json
 jq -S '."config"."mcc-no-auto-format"."value" = null' mbed_app.json | sponge mbed_app.json
 
-echo "---> Set nordic.uart_dma_size = 32"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."nordic.uart_dma_size" = 32' mbed_app.json | sponge mbed_app.json
-
 echo "---> Remove rxbuf from mbed_app.json"
 jq -S 'del(.target_overrides."*"."drivers.uart-serial-rxbuf-size")' mbed_app.json | sponge mbed_app.json
 
-echo "---> Set ${TARGET_NAME} details in mbed_app.json"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.OUTPUT_EXT" = "hex"' mbed_app.json | sponge mbed_app.json
-
-echo "---> Remove MCU_NRF52840.features from mbed_app.json related to PR/7280"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.features_remove" = ["CRYPTOCELL310"]' mbed_app.json | sponge mbed_app.json
-
-echo "---> Remove MCU_NRF52840.MBEDTLS_CONFIG_HW_SUPPORT from mbed_app.json related to PR/7280"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."target.macros_remove" = ["MBEDTLS_CONFIG_HW_SUPPORT"]' mbed_app.json | sponge mbed_app.json
-
-echo "---> Set ${TARGET_NAME} SOTP details in mbed_lib.json"
-jq -S '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-address" = "0xfe000"' mbed_lib.json | sponge mbed_lib.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."sotp-section-1-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-address" = "0xff000"' mbed_lib.json | sponge mbed_lib.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."sotp-section-2-size" = "4096"' mbed_lib.json | sponge mbed_lib.json
-
-jq -S '."target_overrides"."'${TARGET_NAME}'"."update-client.application-details" = "0x3B000"' mbed_app.json | sponge mbed_app.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-address" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-size" = "(1024*1024*1)"' mbed_app.json | sponge mbed_app.json
-jq -S '."target_overrides"."'${TARGET_NAME}'"."update-client.storage-locations" = 1' mbed_app.json | sponge mbed_app.json
-
 echo "---> Change LED to ON"
 sed -r -i -e 's/static DigitalOut led\(MBED_CONF_APP_LED_PINNAME, LED_OFF\);/static DigitalOut led(MBED_CONF_APP_LED_PINNAME, LED_ON);/' source/platform/mbed-os/mcc_common_button_and_led.cpp
-
-echo "---> Copy bootloader to tools dir"
-cp ~/Source/${BOOTLOADER_GITHUB_REPO}/BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/${BOOTLOADER_GITHUB_REPO}.hex mbed-os/tools/bootloaders/mbed-bootloader-${TARGET_NAME}.hex
 
 echo "---> Run mbed update ${MBED_OS_VERSION} on mbed-os"
 cd mbed-os && mbed update ${MBED_OS_VERSION} && cd ..
@@ -271,7 +157,7 @@ echo "---> Copy build log to ~/Share/${EPOCH_TIME}-mbed-compile-client.log"
 cp ${EPOCH_TIME}-mbed-compile-client.log ~/Share
 
 echo "---> Copy the final binary or hex to the share directory"
-cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example.hex ~/Share/${COMBINED_IMAGE_NAME}.hex
+cp BUILD/${TARGET_NAME}/${MBED_OS_COMPILER}/mbed-cloud-client-example.bin ~/Share/${COMBINED_IMAGE_NAME}.bin
 
 # Check for an upgrade image name and build a second image
 if [ "$UPGRADE_IMAGE_NAME" ]; then
