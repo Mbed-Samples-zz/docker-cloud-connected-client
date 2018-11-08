@@ -8,4 +8,5 @@ services:
       - "$PWD/:/root/Config"
       - "../creds:/root/Creds"
       - "../share:/root/Share"
-    container_name: mbed-os.nrf52840_dk.wifi.esp8266.prebuilt.bootloader
+    container_name: raspbian.rpi3b.mbededge
+    network_mode: host
