@@ -1,4 +1,4 @@
-FROM arm32v7:ubuntu
+FROM arm32v7/ubuntu
 
 LABEL maintainer="dexter.fryar@arm.com"
 
@@ -37,6 +37,13 @@ RUN pip install \
       mbed-cli \
       click
 
-RUN mkdir -p /root/Source
+# https://github.com/bbcmicrobit/micropython/issues/514
+# arm-none-eabi/lib/crt0.o: Conflicting CPU architectures 13/1
+
+RUN wget http://mirrors.kernel.org/ubuntu/pool/universe/n/newlib/libnewlib-arm-none-eabi_3.0.0.20180802-2_all.deb
+
+RUN wget http://mirrors.kernel.org/ubuntu/pool/universe/n/newlib/libnewlib-dev_3.0.0.20180802-2_all.deb
+
+RUN dpkg -i libnewlib-arm-none-eabi_3.0.0.20180802-2_all.deb libnewlib-dev_3.0.0.20180802-2_all.deb
 
 WORKDIR /
